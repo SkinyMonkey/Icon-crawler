@@ -1,32 +1,25 @@
+var fs = require('fs');
 var express    = require('express');
-var app        = express();
 var bodyParser = require('body-parser');
+var app        = express();
+var router = express.Router();
+var config = require(__dirname + '/config.js');
+
+var getIcon = require(__dirname + '/app/geticon');
+var sendIcon = require(__dirname + '/app/sendicon');
 
 app.use(bodyParser.urlencoded({ extended: true }));
 
-var port = process.env.PORT || 8080;
-var router = express.Router();
+if (!fs.existsSync(config.fscachePath)){
+  fs.mkdirSync(config.fscachePath);
+}
 
-// FIXME : check if fscache exists
-//         mkdir if it doesnt
-
-router.get('/', function(req, res) {
-  icon = 'favicon.ico';
-  res.sendFile(icon, {'root' : __dirname + '/fscache'}, function (err) {
-    if (err) {
-      console.log(err);
-      res.status(err.status).end();
-    }
-    else {
-      console.log('Sent:', icon);
-    }
-  });
-});
+router.get('/get', getIcon);
 
 app.use('/', router);
 
 // FIXME : add handler for 404?
 //         add handler for general
 
-app.listen(port);
-console.log('Server started on :' + port);
+app.listen(config.port);
+console.log('Server started on :' + config.port);
