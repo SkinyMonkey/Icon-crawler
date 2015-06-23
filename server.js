@@ -6,7 +6,6 @@ var router = express.Router();
 var config = require(__dirname + '/config.js');
 
 var getIcon = require(__dirname + '/app/geticon');
-var sendIcon = require(__dirname + '/app/sendicon');
 
 app.use(bodyParser.urlencoded({ extended: true }));
 
