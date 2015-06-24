@@ -50,16 +50,16 @@ function applyStrategies(res, domain) {
 function getIcon(req, res) {
   var domain = cleanHostName(req.query.domain);
 
-  checkDomainExists(domain, res, function () {
-    if (cache.inCache(domain) && cache.expired(domain) == false) {
-      console.log('Sending cached file');
-      sendIcon.fromCache(res, domain)
-    }
-    else{
+  if (cache.inCache(domain) && cache.expired(domain) == false) {
+    console.log('Sending cached file');
+    sendIcon.fromCache(res, domain)
+  }
+  else{
+    checkDomainExists(domain, res, function () {
       console.log('Sending fresh file');
       applyStrategies(res, domain);
-    }
-  });
+    });
+  }
 }
 
 module.exports = getIcon;
