@@ -3,8 +3,8 @@ var fs = require('fs');
 var url = require('url');
 var request = require('request');
 
-var sendSavedIcon = require('./sendicon').sendSavedIcon;
-var sendCachedIcon = require('./sendicon').sendCachedIcon;
+var cache = require('./cache');
+var sendIcon = require('./sendicon');
 
 var CONFIG = require('../config');
 var STRATEGIES = require('./strategies');
@@ -31,28 +31,34 @@ function checkDomainExists(domain, res, cb) {
   });
 }
 
-var getIcon = function (req, res) {
+function applyStrategies(res, domain) {
+  // FIXME : for each in strategy
+  // strategy
+  // wait for all to be finished
+  // if stamped(domain)
+  //  found = true
+  //  break
+  // if found == false
+  //  res.send(no icon was found)
+  //
 
+  _.forEach(STRATEGIES, function (strategy) {
+    strategy(domain, res)
+  })
+}
+
+function getIcon(req, res) {
   var domain = cleanHostName(req.query.domain);
-  
-  console.log('domain to crawl : ' + domain);
 
   checkDomainExists(domain, res, function () {
-   // FIXME : if icon does not exist in fs cache
-
-    // FIXME : debug
-    STRATEGIES[0](domain, sendSavedIcon, res);
-
-    // FIXME : for strategy in STRATEGIES
-    // var = res strategy(domain) != null
-    // if res != null
-    //  return res
-    // return 'default.ico'
-
-    // else
-    //sendCachedIcon
-
-    // How to know that no strategy worked?
+    if (cache.inCache(domain) && cache.expired(domain) == false) {
+      console.log('Sending cached file');
+      sendIcon.fromCache(res, domain)
+    }
+    else{
+      console.log('Sending fresh file');
+      applyStrategies(res, domain);
+    }
   });
 }
 

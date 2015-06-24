@@ -1,9 +1,12 @@
 var request = require('request');
 var fs = require('fs');
 
+var cache = require('./cache');
 var CONFIG = require('../config');
 
 var sendIcon = function (res, filePath) {
+  // FIXME : get mimes/content length
+
   res.sendFile(filePath, {}, function (err) {
     if (err) {
       res.status(err.status).end();
@@ -14,27 +17,11 @@ var sendIcon = function (res, filePath) {
   });
 }
 
-function sendSavedIcon(uri, domain, headers, res) {
-  var filePath = CONFIG.fscachePath + '/' + domain + '.ico';
-
-  // Save file to fs cache
-  request(uri).pipe(fs.createWriteStream(filePath)).on('close', function(err) {
-    if (err){
-      res.status(err.status).end();
-    }
-    else {
-      // Send file back to client
-      sendIcon(res, filePath);
-    }
-  });
-}
-
-function sendCachedIcon() {
-  ;
+function fromCache(res, domain) {
+  sendIcon(res, cache.iconCachePath(domain));
 }
 
 
 module.exports = {
-  'sendSavedIcon' : sendSavedIcon,
-  'sendCachedIcon' : sendCachedIcon
+  'fromCache' : fromCache,
 }
