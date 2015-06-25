@@ -26,14 +26,14 @@ function saveIfFound(uri, domain, finalRes, found) {
   });
 }
 
-function pathStrategy(callback, domain, finalRes) {
+function pathStrategy(domain, finalRes) {
   _.forEach(GENERIC_PATHS, function (path) {
     saveIfFound('http://' + domain + path, domain, finalRes);
     saveIfFound('http://www.' + domain + path, domain, finalRes);
   });
 }
 
-function crawlStrategy(callback, domain, finalRes) {
+function crawlStrategy(domain, finalRes) {
   /*
   request.get(uri, function(err, res, body) {
     $ = cheerio.load(body);

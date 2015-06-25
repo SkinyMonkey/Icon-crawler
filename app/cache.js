@@ -25,6 +25,7 @@ function stamped(domain) {
 function addMetadata(domain, cacheFilePath) {
   var stats = fs.statSync(cacheFilePath);
 
+  console.log('Adding metadata for : ', domain);
   INDEX[domain]['metadata'] =
     {'content-length' : stats["size"],
      'content-type': mime.lookup(cacheFilePath)};
@@ -54,7 +55,7 @@ function toCache(uri, domain, headers, res, cb) {
       addMetadata(domain, cacheFilePath);
 
       // cb == sendIcon.fromCache
-      cb(res, domain);
+      cb(domain, res);
     }
   });
 }
