@@ -31,33 +31,39 @@ function checkDomainExists(domain, res, cb) {
   });
 }
 
-function applyStrategies(res, domain) {
-  // FIXME : for each in strategy
-  // strategy
-  // wait for all to be finished
-  // if stamped(domain)
-  //  found = true
-  //  break
-  // if found == false
-  //  res.send(no icon was found)
-  //
+function strategyClosures(domain, res) {
+  // see lo dash for better formule
+  // for strategy in strategies
+  // push(function() {strategy(domain, res)})
+}
 
+function applyStrategies(domain, res) {
   _.forEach(STRATEGIES, function (strategy) {
-    strategy(domain, res)
-  })
+    strategy(domain, res);
+  });
+/*  // FIXME : check what parallel does
+  async.parallel(strategyClosures(domain, res), function(){
+    if (!cache.inCache(domain))
+      res.send({'error': 'No suitable icon could be found.'}).end();
+  });
+  */
 }
 
 function getIcon(req, res) {
   var domain = cleanHostName(req.query.domain);
 
-  if (cache.inCache(domain) && cache.expired(domain) == false) {
+  var expired = cache.stamped(domain) && cache.expired(domain);
+  if (cache.inCache(domain) && expired == false) {
     console.log('Sending cached file');
-    sendIcon.fromCache(res, domain)
+    sendIcon.fromCache(domain, res)
   }
   else{
+    if (cache.inCache(domain) && expired)
+      fs.unlinkSync(cache.iconCachePath(domain));
+
     checkDomainExists(domain, res, function () {
       console.log('Sending fresh file');
-      applyStrategies(res, domain);
+      applyStrategies(domain, res);
     });
   }
 }
