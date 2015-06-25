@@ -39,7 +39,7 @@ function inCache(domain) {
   return (fileExists(iconCachePath(domain)));
 }
 
-function toCache(uri, domain, headers, res, cb) {
+function toCache(uri, domain, res, cb) {
   // FIXME : what happens with very close querys for same domain?
   var cacheFilePath = iconCachePath(domain);
 
