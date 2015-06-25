@@ -1,37 +1,53 @@
 var _ = require('lodash');
+var cheerio = require('cheerio');
 var request = require('request');
 
+var cache = require('./cache');
 var sendIcon = require('./sendicon');
 
 var GENERIC_PATHS = ['/favicon.ico', '/apple-touch-icon.png'];
-function pathStrategy(domain, found, finalRes) {
-  _.forEach(GENERIC_PATHS, function (path) {
 
-    var uri = 'http://' + domain + path;
-    request.head(uri, function(err, res, body){
-      // FIXME : check content type/content length 
-      if (res.headers['content-type'].indexOf('image/') !== 0)
-        return;
+function saveIfFound(uri, domain, finalRes, found) {
+  request.head(uri, function(err, res, body){
+    if (res.headers['content-type'].indexOf('image/') !== 0)
+      return;
 
-      if (!err && (res.statusCode == 200 || res.statusCode == 304)) {
-        found(uri, domain, res.headers, finalRes);
-      }
-      else {
-        console.log(err);
-      }
-    });
+    if (!err && (res.statusCode == 200 || res.statusCode == 304))
+      cache.toCache(uri, domain, res.headers, finalRes, sendIcon.fromCache);
+    else
+      console.log(err);
   });
-
-  // FIXME
-  // try www + domain + path
-
-
-  // FIXME : how to wait for every requests to be done before send this back?
-  //console.log('No favicon could be found with this strategy');
 }
 
-function crawlStrategy(domain, found, finalRes) {
-  ;
+function pathStrategy(domain, finalRes) {
+  _.forEach(GENERIC_PATHS, function (path) {
+    saveIfFound('http://' + domain + path, domain, finalRes);
+    saveIfFound('http://www.' + domain + path, domain, finalRes);
+  });
+}
+
+function crawlStrategy(domain, finalRes) {
+  request.get('http://' + domain, function(err, res, body) {
+    if (!err && res.statusCode == 200) {
+      $ = cheerio.load(body);
+
+      $('link').each(function (index, element) {
+        if ($(element).attr('rel').indexOf('icon') != -1)
+          cache.toCache($(element).attr('href'), domain, res.headers, finalRes, sendIcon.fromCache);
+      });
+
+      // FIXME : must be downloaded first to check dimensions
+      /*
+         $('img').each(function (index, element) {
+         if ($(element).attr('id').indexOf('logo') != -1
+         || $(element).attr('src').indexOf('logo') != -1
+         || $(element).attr('class').indexOf('logo') != -1)
+         cache.toCache($(element).attr('src'), domain, res.headers, finalRes, sendIcon.fromCache);
+         });
+         */
+    }
+
+  });
 }
 
 module.exports = [pathStrategy, crawlStrategy];

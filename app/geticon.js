@@ -3,8 +3,8 @@ var fs = require('fs');
 var url = require('url');
 var request = require('request');
 
-var sendSavedIcon = require('./sendicon').sendSavedIcon;
-var sendCachedIcon = require('./sendicon').sendCachedIcon;
+var cache = require('./cache');
+var sendIcon = require('./sendicon');
 
 var CONFIG = require('../config');
 var STRATEGIES = require('./strategies');
@@ -31,29 +31,35 @@ function checkDomainExists(domain, res, cb) {
   });
 }
 
-var getIcon = function (req, res) {
+function strategyClosures(domain, res) {
+  // see lo dash for better formule
+  // for strategy in strategies
+  // push(function() {strategy(domain, res)})
+}
 
-  var domain = cleanHostName(req.query.domain);
-  
-  console.log('domain to crawl : ' + domain);
-
-  checkDomainExists(domain, res, function () {
-   // FIXME : if icon does not exist in fs cache
-
-    // FIXME : debug
-    STRATEGIES[0](domain, sendSavedIcon, res);
-
-    // FIXME : for strategy in STRATEGIES
-    // var = res strategy(domain) != null
-    // if res != null
-    //  return res
-    // return 'default.ico'
-
-    // else
-    //sendCachedIcon
-
-    // How to know that no strategy worked?
+function applyStrategies(domain, res) {
+  _.forEach(STRATEGIES, function (strategy) {
+    strategy(domain, res);
   });
+}
+
+function getIcon(req, res) {
+  var domain = cleanHostName(req.query.domain);
+
+  var expired = cache.stamped(domain) && cache.expired(domain);
+  if (cache.inCache(domain) && expired == false) {
+    console.log('Sending cached file');
+    sendIcon.fromCache(domain, res)
+  }
+  else{
+    if (cache.inCache(domain) && expired)
+      fs.unlinkSync(cache.iconCachePath(domain));
+
+    checkDomainExists(domain, res, function () {
+      console.log('Sending fresh file');
+      applyStrategies(domain, res);
+    });
+  }
 }
 
 module.exports = getIcon;
