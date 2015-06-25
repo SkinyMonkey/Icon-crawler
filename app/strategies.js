@@ -4,6 +4,7 @@ var request = require('request');
 
 var cache = require('./cache');
 var sendIcon = require('./sendicon');
+var logger = require('../log');
 
 var GENERIC_PATHS = ['/favicon.ico', '/apple-touch-icon.png'];
 
@@ -17,7 +18,7 @@ function saveIfFound(uri, domain, asyncCb) {
         asyncCb(uri);
     }
     else
-      console.log(err);
+      logger.warning(err);
   });
 }
 

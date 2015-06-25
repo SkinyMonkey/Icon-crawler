@@ -6,6 +6,7 @@ var async = require('async');
 
 var cache = require('./cache');
 var sendIcon = require('./sendicon');
+var logger = require('../log');
 
 var CONFIG = require('../config');
 var STRATEGIES = require('./strategies');
@@ -61,7 +62,7 @@ function getIcon(req, res) {
 
   var expired = cache.stamped(domain) && cache.expired(domain);
   if (cache.inCache(domain) && expired == false) {
-    console.log('Sending cached file');
+    logger.info('Sending cached file');
     sendIcon.fromCache(domain, res)
   }
   else{
@@ -69,7 +70,7 @@ function getIcon(req, res) {
       fs.unlinkSync(cache.iconCachePath(domain));
 
     checkDomainExists(domain, res, function () {
-      console.log('Sending fresh file');
+      logger.info('Sending fresh file');
       applyStrategies(domain, res);
     });
   }
