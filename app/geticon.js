@@ -41,12 +41,6 @@ function applyStrategies(domain, res) {
   _.forEach(STRATEGIES, function (strategy) {
     strategy(domain, res);
   });
-/*  // FIXME : check what parallel does
-  async.parallel(strategyClosures(domain, res), function(){
-    if (!cache.inCache(domain))
-      res.send({'error': 'No suitable icon could be found.'}).end();
-  });
-  */
 }
 
 function getIcon(req, res) {

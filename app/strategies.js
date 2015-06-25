@@ -7,21 +7,14 @@ var sendIcon = require('./sendicon');
 
 var GENERIC_PATHS = ['/favicon.ico', '/apple-touch-icon.png'];
 
-// We want to call the callback when the action failed or finished
-// we can redefine the function to return its result
-// then we'll use the last callback function to select the a result and save it
-
 function saveIfFound(uri, domain, finalRes, found) {
   request.head(uri, function(err, res, body){
     if (res.headers['content-type'].indexOf('image/') !== 0)
-      // FIXME : call callback here
       return;
 
     if (!err && (res.statusCode == 200 || res.statusCode == 304))
-      // FIXME : call callback here
       cache.toCache(uri, domain, res.headers, finalRes, sendIcon.fromCache);
     else
-      // FIXME : call callback here
       console.log(err);
   });
 }
@@ -34,19 +27,27 @@ function pathStrategy(domain, finalRes) {
 }
 
 function crawlStrategy(domain, finalRes) {
-  /*
-  request.get(uri, function(err, res, body) {
-    $ = cheerio.load(body);
-  // look for link with icon in the rel
-  // take the href
-    $('link').forEach(function (link) {
-      if (link.attr('rel').indexOf('icon') != -1)
-        cache.toCache(link.attr('href'), domain, res.headers, finalRes, sendIcon.fromCache);
-    });
+  request.get('http://' + domain, function(err, res, body) {
+    if (!err && res.statusCode == 200) {
+      $ = cheerio.load(body);
 
-  // look for anything that looks like an icon
+      $('link').each(function (index, element) {
+        if ($(element).attr('rel').indexOf('icon') != -1)
+          cache.toCache($(element).attr('href'), domain, res.headers, finalRes, sendIcon.fromCache);
+      });
+
+      // FIXME : must be downloaded first to check dimensions
+      /*
+         $('img').each(function (index, element) {
+         if ($(element).attr('id').indexOf('logo') != -1
+         || $(element).attr('src').indexOf('logo') != -1
+         || $(element).attr('class').indexOf('logo') != -1)
+         cache.toCache($(element).attr('src'), domain, res.headers, finalRes, sendIcon.fromCache);
+         });
+         */
+    }
+
   });
-  */
 }
 
 module.exports = [pathStrategy, crawlStrategy];

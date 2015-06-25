@@ -5,34 +5,34 @@ var mime = require('mime');
 var fileExists = require('../utils.js').fileExists;
 
 var CONFIG = require('../config.js');
-var INDEX = {};
+var metadata = {};
 
 function stamp(domain) {
-  if (domain in INDEX) {
-    INDEX[domain].timestamp = Date.now();
+  if (domain in metadata) {
+    metadata[domain].timestamp = Date.now();
   }
   else {
-    INDEX[domain] = {
+    metadata[domain] = {
       'timestamp': Date.now()
     }
   }
 }
 
 function stamped(domain) {
-  return (domain in INDEX);
+  return (domain in metadata);
 }
 
 function addMetadata(domain, cacheFilePath) {
   var stats = fs.statSync(cacheFilePath);
 
   console.log('Adding metadata for : ', domain);
-  INDEX[domain]['metadata'] =
+  metadata[domain]['metadata'] =
     {'content-length' : stats["size"],
      'content-type': mime.lookup(cacheFilePath)};
 }
 
 function iconMetadata(domain) {
-  return INDEX[domain]['metadata'];
+  return metadata[domain]['metadata'];
 }
 
 function inCache(domain) {
@@ -61,17 +61,9 @@ function toCache(uri, domain, headers, res, cb) {
 }
 
 function expired(domain) {
- var timestamp = INDEX[domain].timestamp - 0;
+ var timestamp = metadata[domain].timestamp - 0;
  var res = ((timestamp + CONFIG.timeout) < Date.now());
  console.log('expired:', res);
- /*
- console.log('domain:', domain);
- console.log('now :',Date.now());
- console.log('timestamp:', timestamp);
- console.log('timeout:', (timestamp + CONFIG.timeout));
- console.log('CONFIG.timeout:', CONFIG.timeout);
- console.log(res);
- */
  return (res);
 }
 
@@ -83,14 +75,14 @@ function loadIndexFromFS(cb) {
         console.log('Error while loading the cache index : ' + err);
         process.exit(-1);
       }
-      INDEX = JSON.parse(data);
+      metadata = JSON.parse(data);
       cb();
     });
   }
   else {
     console.log("No index file found, creating one");
     fs.writeFileSync(CONFIG.cacheIndexPath, "{}");
-    INDEX = {};
+    metadata = {};
     cb();
   }
 }
@@ -98,8 +90,8 @@ function loadIndexFromFS(cb) {
 function saveIndexToFS() {
   console.log('Dumping index to fs.');
   console.log(CONFIG.cacheIndexPath);
-  console.log(JSON.stringify(INDEX));
-  fs.writeFileSync(CONFIG.cacheIndexPath, JSON.stringify(INDEX));
+  console.log(JSON.stringify(metadata));
+  fs.writeFileSync(CONFIG.cacheIndexPath, JSON.stringify(metadata));
 }
 
 function iconCachePath(domain) {
