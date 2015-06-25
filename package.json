@@ -15,6 +15,7 @@
   "author": "Adrien Candiotti",
   "license": "ISC",
   "dependencies": {
+    "async": "^1.2.1",
     "body-parser": "^1.13.1",
     "cheerio": "^0.19.0",
     "express": "^4.13.0",

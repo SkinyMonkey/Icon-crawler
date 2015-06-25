@@ -2,6 +2,7 @@ var _ = require('lodash');
 var fs = require('fs');
 var url = require('url');
 var request = require('request');
+var async = require('async');
 
 var cache = require('./cache');
 var sendIcon = require('./sendicon');
@@ -31,15 +32,27 @@ function checkDomainExists(domain, res, cb) {
   });
 }
 
-function strategyClosures(domain, res) {
-  // see lo dash for better formule
-  // for strategy in strategies
-  // push(function() {strategy(domain, res)})
+function strategyClosures(domain) {
+  closures = [];
+  _.forEach(STRATEGIES, function(strategy) {
+    closures.push(function (asynCb) {
+      strategy(domain, asynCb);
+    });
+  });
+  return (closures);
 }
 
 function applyStrategies(domain, res) {
-  _.forEach(STRATEGIES, function (strategy) {
-    strategy(domain, res);
+  async.series(strategyClosures(domain), function (uri) {
+    // This is a hack on the series error mecanism.
+    // Either this callback will be called with an acceptable result
+    // or it will be called with null as a first parameter when
+    // there is no more strategies available.
+
+    if (uri)
+      cache.toCache(uri, domain, res, sendIcon.fromCache);
+    else
+      res.send({'error': 'No icon could be found on ' + domain}).end();
   });
 }
 
