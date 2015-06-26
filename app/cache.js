@@ -2,9 +2,10 @@ var fs = require('fs');
 var request = require('request');
 var mime = require('mime');
 
-var fileExists = require('../utils.js').fileExists;
+var fileExists = require('../utils').fileExists;
+var logger = require('../log');
 
-var CONFIG = require('../config.js');
+var CONFIG = require('../config');
 var metadata = {};
 
 function stamp(domain) {
@@ -24,11 +25,12 @@ function stamped(domain) {
 
 function addMetadata(domain, cacheFilePath) {
   var stats = fs.statSync(cacheFilePath);
-
-  console.log('Adding metadata for : ', domain);
+  
+  logger.info('Adding metadata for : ', domain);
   metadata[domain]['metadata'] =
     {'content-length' : stats["size"],
      'content-type': mime.lookup(cacheFilePath)};
+  return true;
 }
 
 function iconMetadata(domain) {
@@ -39,31 +41,23 @@ function inCache(domain) {
   return (fileExists(iconCachePath(domain)));
 }
 
-function toCache(uri, domain, res, cb) {
-  // FIXME : what happens with very close querys for same domain?
+function toCache(domain, res, cb) {
   var cacheFilePath = iconCachePath(domain);
 
-  // Avoid redownloading an icon with different strategies
-  if (inCache(domain))
+  stamp(domain);
+  if (addMetadata(domain, cacheFilePath) == false) {
+    res.send({'error': 'The domain sent back an invalid icon :' + domain}).end();
     return;
+  }
 
-  request(uri).pipe(fs.createWriteStream(cacheFilePath)).on('close', function(err) {
-    if (err)
-      res.status(err.status).end();
-    else {
-      stamp(domain);
-      addMetadata(domain, cacheFilePath);
-
-      // cb == sendIcon.fromCache
-      cb(domain, res);
-    }
-  });
+  // cb == sendIcon.fromCache
+  cb(domain, res);
 }
 
 function expired(domain) {
  var timestamp = metadata[domain].timestamp - 0;
  var res = ((timestamp + CONFIG.timeout) < Date.now());
- console.log('expired:', res);
+ logger.info('expired:', res);
  return (res);
 }
 
@@ -71,8 +65,7 @@ function loadIndexFromFS(cb) {
   if (fileExists(CONFIG.cacheIndexPath)) {
     fs.readFile(CONFIG.cacheIndexPath, function (err, data) {
       if (err) {
-        // FIXME : check what's in error
-        console.log('Error while loading the cache index : ' + err);
+        logger.error('Error while loading the cache index : ' + err);
         process.exit(-1);
       }
       metadata = JSON.parse(data);
@@ -80,7 +73,7 @@ function loadIndexFromFS(cb) {
     });
   }
   else {
-    console.log("No index file found, creating one");
+    logger.error("No index file found, creating one");
     fs.writeFileSync(CONFIG.cacheIndexPath, "{}");
     metadata = {};
     cb();
@@ -88,9 +81,7 @@ function loadIndexFromFS(cb) {
 }
 
 function saveIndexToFS() {
-  console.log('Dumping index to fs.');
-  console.log(CONFIG.cacheIndexPath);
-  console.log(JSON.stringify(metadata));
+  logger.info('Dumping index to fs.');
   fs.writeFileSync(CONFIG.cacheIndexPath, JSON.stringify(metadata));
 }
 

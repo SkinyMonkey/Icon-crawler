@@ -4,20 +4,52 @@ var request = require('request');
 
 var cache = require('./cache');
 var sendIcon = require('./sendicon');
+var logger = require('../log');
 
 var GENERIC_PATHS = ['/favicon.ico', '/apple-touch-icon.png'];
 
-function saveIfFound(uri, domain, asyncCb) {
-  request.head(uri, function(err, res, body){
-    if (res.headers['content-type'].indexOf('image/') !== 0)
-      return;
+// FIXME : move
+var fs = require('fs');
+function downloadIcon(uri, domain, asyncCb) {
+  var cacheFilePath = cache.iconCachePath(domain);
 
-    if (!err && (res.statusCode == 200 || res.statusCode == 304)) {
-      if (!cache.inCache(domain))
-        asyncCb(uri);
+  if (cache.inCache(domain))
+    return;
+
+  request(uri).pipe(fs.createWriteStream(cacheFilePath)).on('close', function(err) {
+    if (err)
+      res.status(err.status).end();
+    else {
+
+      var stats = fs.statSync(cacheFilePath);
+
+      // Strange case of 'mongodb.com'
+      if (stats["size"] == 0) {
+        fs.unlinkSync(cacheFilePath);
+        logger.error('The domain sent back an invalid icon :' + domain);
+        asyncCb(null, null);
+        return;
+      }
+
+      asyncCb(uri);
     }
-    else
-      console.log(err);
+  });
+}
+
+function saveIfFound(uri, domain, asyncCb) {
+  logger.debug('Trying with path strategy: ' + domain);
+
+  request(uri, function(err, res, body){
+    if (!err && (res.statusCode == 200 || res.statusCode == 304)) {
+      if (!cache.inCache(domain)) {
+        logger.info('Found with strategy #1: ' + domain);
+        downloadIcon(uri, domain, asyncCb);
+      }
+    }
+    else{
+      if (res && res.statusCode == 404)
+        logger.warn('Nothing here : ' + uri);
+    }
   });
 }
 
@@ -34,16 +66,20 @@ function crawlStrategy(domain, asyncCb) {
       $ = cheerio.load(body);
 
       $('link').each(function (index, element) {
-        if ($(element).attr('rel').indexOf('icon') != -1)
-          asyncCb(uri);
+        if ($(element).attr('rel').indexOf('icon') != -1) {
+          logger.info('Found with strategy #2: ' + domain);
+          downloadIcon('http://' + domain + $(element).attr('href'), domain, asyncCb);
+        }
       });
 
+      logger.debug('trying something else');
       // FIXME : must be downloaded first to check dimensions
       /*
          $('img').each(function (index, element) {
          if ($(element).attr('id').indexOf('logo') != -1
          || $(element).attr('src').indexOf('logo') != -1
          || $(element).attr('class').indexOf('logo') != -1)
+          downloadIcon(asyncCb, );
          asyncCb($(element).attr('src'));
          });
          */
