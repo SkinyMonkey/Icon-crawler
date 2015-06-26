@@ -44,6 +44,12 @@ Git with git flow was used as a versioning tool.
 
 I like to use it to have a consistent model when working in team and ensure good practice at a personal level.
 
+### Launch
+
+As the project is using bunyan for console/file logging I recommand using the following line to launch it:
+
+npm start | ./node_modules/bunyan/bin/bunyan
+
 ### General algorithm
 
 When a request is received it will look if the icon is in cache.
