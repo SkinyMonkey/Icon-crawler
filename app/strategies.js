@@ -1,4 +1,5 @@
 var _ = require('lodash');
+var fs = require('fs');
 var cheerio = require('cheerio');
 var request = require('request');
 
@@ -8,8 +9,6 @@ var logger = require('../log');
 
 var GENERIC_PATHS = ['/favicon.ico', '/apple-touch-icon.png'];
 
-// FIXME : move
-var fs = require('fs');
 function downloadIcon(uri, domain, asyncCb) {
   var cacheFilePath = cache.iconCachePath(domain);
 
@@ -23,7 +22,6 @@ function downloadIcon(uri, domain, asyncCb) {
 
       var stats = fs.statSync(cacheFilePath);
 
-      // Strange case of 'mongodb.com'
       if (stats["size"] == 0) {
         fs.unlinkSync(cacheFilePath);
         logger.error('The domain sent back an invalid icon :' + domain);
@@ -71,20 +69,7 @@ function crawlStrategy(domain, asyncCb) {
           downloadIcon('http://' + domain + $(element).attr('href'), domain, asyncCb);
         }
       });
-
-      logger.debug('trying something else');
-      // FIXME : must be downloaded first to check dimensions
-      /*
-         $('img').each(function (index, element) {
-         if ($(element).attr('id').indexOf('logo') != -1
-         || $(element).attr('src').indexOf('logo') != -1
-         || $(element).attr('class').indexOf('logo') != -1)
-          downloadIcon(asyncCb, );
-         asyncCb($(element).attr('src'));
-         });
-         */
-    }
-
+   }
   });
 }
 

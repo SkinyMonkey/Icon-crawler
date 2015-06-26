@@ -73,7 +73,7 @@ function loadIndexFromFS(cb) {
     });
   }
   else {
-    logger.error("No index file found, creating one");
+    logger.info("No index file found, creating one");
     fs.writeFileSync(CONFIG.cacheIndexPath, "{}");
     metadata = {};
     cb();
