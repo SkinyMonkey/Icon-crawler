@@ -1,0 +1,101 @@
+This icon scraper was realised using node.js and pure javascript.
+
+I tried to work with this guide:
+http://nodeguide.com/style.html
+
+for naming conventions and to keep a clear/clean code.
+
+When a request is received it will look if the domain exists,
+then if the icon is in cache and finally tries to download the icon
+from the domain if necessary.
+
+For that it uses two strategies, launched sequentially, using the async module.
+The later was used to clean up the code and could be used for future improvements.
+
+The first strategy relies on the 'generic' places where a icon or favicon file can be found.
+
+The second scrap the first webpage (no need for in depth search, showing the icon/logo as soon as possible seems a pretty obvious marketing topic)
+and looks for anything that looks for an icon based on the icon keyword.
+
+I choosed to do them sequentially as the first strategy is nearly costless compared to the second one.
+The system is made so that a new strategy could be added very easily.
+
+A file system cache was handcrafted to allow quicker responses and lower ressource usage.
+It uses a folder, where the found icon are stored and an index file, that contains a timestamp for expiration and some metadata about each icons.
+On startup the index is loaded and will dumped in case of interruption (SIGINT signal)
+
+The cache module was made to be independant from the rest of the code.
+By rewriting the functions, keeping the same prototypes input/outputs
+we could easily replace this cache system by something else.
+
+As for buildinga bigger architecture, here is what I think would work:
+
+First, we should replace the cache with a real database engine.
+Scaling horizontally using an fs cache doesn't seems like a good idea.
+Mongodb would be good in that case:
+
+No relationships in this projects,
+there will be few modification over time,
+queries are very simple,
+json oriented, 
+sharding could be used easily,
+replication/redundancy too
+
+An in memory cache like Redis would work but json and persistance with great performances wins (mongo is mmapping files in memory, keeping it very efficient).
+
+Couchbase could be a good option too, but as I don't have experience with it I will only refer to what is said about it that makes me think it could be a good tool:
+It's said to be:
+
+very fast
+to supports json
+have persistence to disk
+have master-master replication
+
+it is also said overall that it's to consider for projects that needs:
+low latency data access
+high availability
+high concurrency support.
+
+The second point I would look at is a message queue system to distribute tasks to workers and retrieve data from them.
+
+It could also be used to keep track of which domain are being crawled at the moment, to avoid any multiple workers working on the same one.
+
+About limiting the rate per domain or per ip, the database could be used.
+A simple simple extra table could keep track of which ip is contacting the API and how much.
+
+As a general architecture I would go for front workers that would receive the request
+and check if the domain is in cache or not.
+It would then send it back send some work to some background workers through the message queue system.
+These front workers could also do some sharding work upon the cache/db in case it's not handled by the engine.
+
+I know some people stores images in databases, I don't personally believes it's a good practice.
+Db storage is more expensive than fs storage.
+The sendfile call can be used to asynchronously send a file directly from the file system to the network interface.
+(http://man7.org/linux/man-pages/man2/sendfile.2.html)
+No need to encode/decode the picture.
+And finally using an fs specialised in small files like XFS/ReiserFS could be a big plus.
+
+To answer the question "How to choose the best image".
+Well it all depends on what you want: the size, the weight, the quality ratio between the too.
+But that could be added as an improvement in the parameters.
+We can imagine adding a field of weight (instead of fixed values) for each characteristics and let the engine decide for us.
+
+If I had to solve the "same few domains/many different domains"
+For the second I would use what I described.
+But for the first one I would handcraft a cache engine that use a specialized datastructure.
+A tree that would rebalance to keep the most used domains information at the top.
+Making it extremly fast.
+(Sorry, despite looking for the name of such a tree for an hour, I could not find it back, If I do I'll send it to you right away)
+
+As Improvements I would add some points.
+Maybe do some preventive crawling of well known websites.
+Add a way to bypass the cache (with a limited rate of course) in the arguments.
+Add a bit of learning:
+  if the result does not seems fine, add a way to tell the serv that the icon was not satisfying. If a certain score is reached, try other strategies to get it.
+A blacklist of images maybe?
+Add other ways to get an image,
+  by checking for background images used on links and alike
+  or even the fontabased icons like the one github uses.
+
+Git with git flow was used as a versioning tool.
+(http://danielkummer.github.io/git-flow-cheatsheet/)
