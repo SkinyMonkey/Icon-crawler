@@ -25,11 +25,12 @@ function stamped(domain) {
 
 function addMetadata(domain, cacheFilePath) {
   var stats = fs.statSync(cacheFilePath);
-
+  
   logger.info('Adding metadata for : ', domain);
   metadata[domain]['metadata'] =
     {'content-length' : stats["size"],
      'content-type': mime.lookup(cacheFilePath)};
+  return true;
 }
 
 function iconMetadata(domain) {
@@ -40,25 +41,17 @@ function inCache(domain) {
   return (fileExists(iconCachePath(domain)));
 }
 
-function toCache(uri, domain, res, cb) {
-  // FIXME : what happens with very close querys for same domain?
+function toCache(domain, res, cb) {
   var cacheFilePath = iconCachePath(domain);
 
-  // Avoid redownloading an icon with different strategies
-  if (inCache(domain))
+  stamp(domain);
+  if (addMetadata(domain, cacheFilePath) == false) {
+    res.send({'error': 'The domain sent back an invalid icon :' + domain}).end();
     return;
+  }
 
-  request(uri).pipe(fs.createWriteStream(cacheFilePath)).on('close', function(err) {
-    if (err)
-      res.status(err.status).end();
-    else {
-      stamp(domain);
-      addMetadata(domain, cacheFilePath);
-
-      // cb == sendIcon.fromCache
-      cb(domain, res);
-    }
-  });
+  // cb == sendIcon.fromCache
+  cb(domain, res);
 }
 
 function expired(domain) {
@@ -72,7 +65,6 @@ function loadIndexFromFS(cb) {
   if (fileExists(CONFIG.cacheIndexPath)) {
     fs.readFile(CONFIG.cacheIndexPath, function (err, data) {
       if (err) {
-        // FIXME : check what's in error
         logger.error('Error while loading the cache index : ' + err);
         process.exit(-1);
       }
@@ -89,7 +81,7 @@ function loadIndexFromFS(cb) {
 }
 
 function saveIndexToFS() {
-  logger.error('Dumping index to fs.');
+  logger.info('Dumping index to fs.');
   fs.writeFileSync(CONFIG.cacheIndexPath, JSON.stringify(metadata));
 }
 

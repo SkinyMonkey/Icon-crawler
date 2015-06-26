@@ -22,13 +22,16 @@ function checkDomainExists(domain, res, cb) {
   request.head('http://' + domain, function(err){
     if (err){
       if (err.errno == 'ENOTFOUND'){
+        logger.info('Domain does not exist: ' + domain);
         return res.send({'error' : 'This domain does not exists: ' + domain}).end();
       }
+      logger.info('An error occured for: ' + domain + ' : ' + err.errno);
       return res.send(
       {'error' : 'An error occured on this domain, please contact an administrator'})
       .end();
     }
 
+    logger.info('Domain exists: ' + domain);
     cb(domain, res);
   });
 }
@@ -51,7 +54,7 @@ function applyStrategies(domain, res) {
     // there is no more strategies available.
 
     if (uri)
-      cache.toCache(uri, domain, res, sendIcon.fromCache);
+      cache.toCache(domain, res, sendIcon.fromCache);
     else
       res.send({'error': 'No icon could be found on ' + domain}).end();
   });
@@ -62,7 +65,7 @@ function getIcon(req, res) {
 
   var expired = cache.stamped(domain) && cache.expired(domain);
   if (cache.inCache(domain) && expired == false) {
-    logger.info('Sending cached file');
+    logger.info('Sending cached file for: ' + domain);
     sendIcon.fromCache(domain, res)
   }
   else{
@@ -70,7 +73,7 @@ function getIcon(req, res) {
       fs.unlinkSync(cache.iconCachePath(domain));
 
     checkDomainExists(domain, res, function () {
-      logger.info('Sending fresh file');
+      logger.info('Sending fresh file for: ' + domain);
       applyStrategies(domain, res);
     });
   }
